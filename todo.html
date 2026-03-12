@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do Wheel of Fortune</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #f8fafc;
+            --text: #1e293b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 { text-align: center; margin-bottom: 1.5rem; }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+
+        input {
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: opacity 0.2s;
+        }
+
+        .btn-add { background-color: #e2e8f0; color: var(--text); }
+        .btn-submit { background-color: var(--primary); color: white; }
+        button:hover { opacity: 0.8; }
+
+        /* Stile Ruota */
+        #wheel-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        #wheel-wrapper {
+            position: relative;
+            margin: 20px;
+        }
+
+        #arrow {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0; 
+            height: 0; 
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid #ef4444;
+            z-index: 10;
+        }
+
+        canvas {
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="setup-container" class="container">
+        <h1>Cosa devi fare?</h1>
+        <div id="input-list" class="input-group">
+            <input type="text" placeholder="Attività 1" class="task-input">
+            <input type="text" placeholder="Attività 2" class="task-input">
+            <input type="text" placeholder="Attività 3" class="task-input">
+            <input type="text" placeholder="Attività 4" class="task-input">
+            <input type="text" placeholder="Attività 5" class="task-input">
+        </div>
+        <div class="buttons">
+            <button class="btn-add" onclick="addInput()">+ Aggiungi</button>
+            <button class="btn-submit" onclick="startWheel()">Invia</button>
+        </div>
+    </div>
+
+    <div id="wheel-container">
+        <h1>La sorte ha deciso...</h1>
+        <div id="wheel-wrapper">
+            <div id="arrow"></div>
+            <canvas id="wheelCanvas" width="400" height="400"></canvas>
+        </div>
+        <div id="result">Attendere...</div>
+        <button class="btn-add" style="margin-top: 20px;" onclick="location.reload()">Reset</button>
+    </div>
+
+    <script>
+        let tasks = [];
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        let currentRotation = 0;
+
+        function addInput() {
+            const container = document.getElementById('input-list');
+            const newInput = document.createElement('input');
+            newInput.type = 'text';
+            newInput.placeholder = `Attività ${container.children.length + 1}`;
+            newInput.className = 'task-input';
+            container.appendChild(newInput);
+        }
+
+        function startWheel() {
+            const inputs = document.querySelectorAll('.task-input');
+            tasks = Array.from(inputs)
+                         .map(input => input.value.trim())
+                         .filter(value => value !== "");
+
+            if (tasks.length < 2) {
+                alert("Inserisci almeno 2 attività per girare la ruota!");
+                return;
+            }
+
+            document.getElementById('setup-container').classList.add('hidden');
+            document.getElementById('wheel-container').style.display = 'flex';
+            
+            drawWheel();
+            spin();
+        }
+
+        function drawWheel() {
+            const numSegments = tasks.length;
+            const arcSize = (2 * Math.PI) / numSegments;
+            const colors = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            tasks.forEach((task, i) => {
+                const angle = i * arcSize;
+                
+                // Disegna spicchio
+                ctx.beginPath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.moveTo(200, 200);
+                ctx.arc(200, 200, 200, angle, angle + arcSize);
+                ctx.lineTo(200, 200);
+                ctx.fill();
+                ctx.stroke();
+
+                // Aggiungi testo
+                ctx.save();
+                ctx.translate(200, 200);
+                ctx.rotate(angle + arcSize / 2);
+                ctx.textAlign = "right";
+                ctx.fillStyle = "white";
+                ctx.font = "bold 16px Arial";
+                ctx.fillText(task.substring(0, 15), 180, 10);
+                ctx.restore();
+            });
+        }
+
+        function spin() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerText = "Girando...";
+
+            // Durata casuale tra 0.5 e 1.5 secondi (come richiesto)
+            const duration = 500 + Math.random() * 1000;
+            // Rotazione casuale tra 3 e 6 giri completi + un offset
+            const extraRotation = 1000 + Math.random() * 2000;
+            
+            const startTimestamp = performance.now();
+
+            function animate(now) {
+                const elapsed = now - startTimestamp;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Funzione di easing (decelerazione)
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                const rotation = easeOut * extraRotation;
+                
+                canvas.style.transform = `rotate(${rotation}deg)`;
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    finalizeSelection(rotation);
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        function finalizeSelection(degrees) {
+            const actualDeg = degrees % 360;
+            const numSegments = tasks.length;
+            const arcSize = 360 / numSegments;
+            
+            // Calcolo dell'indice: la freccia è in alto (-90 gradi rispetto allo zero del canvas)
+            // Sottraiamo la rotazione e aggiustiamo per l'angolo della freccia
+            let index = Math.floor((360 - actualDeg + 270) % 360 / arcSize);
+            
+            document.getElementById('result').innerText = `Oggi ti tocca: ${tasks[index]}!`;
+        }
+    </script>
+</body>
+</html>
